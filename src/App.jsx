@@ -1,121 +1,124 @@
-import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import './App.css'
+import { useEffect, useState } from 'react'
+import Casilla from './components/Casilla.jsx'
+import Teclado from './components/Teclado.jsx'
+import {
+  FILAS,
+  tableroVacio,
+  palabraAlAzar,
+  estadosDeFila,
+  estadosDelTeclado,
+} from './juego.js'
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [intentos, setIntentos] = useState(tableroVacio())
+  const [filaActual, setFilaActual] = useState(0)
+  const [solucion, setSolucion] = useState(() => palabraAlAzar())
+  const [aviso, setAviso] = useState('')
+
+  const ultimo = filaActual > 0 ? intentos[filaActual - 1].join('') : ''
+  const ganada = ultimo === solucion
+  const terminada = ganada || filaActual === FILAS
+
+  useEffect(() => {
+    document.querySelector('.casilla:enabled')?.focus()
+  }, [filaActual])
+
+  function guardarLetra(f, c, letra) {
+    const copia = intentos.map((fila) => [...fila])
+    copia[f][c] = letra
+    setIntentos(copia)
+    setAviso('')
+  }
+
+  function cambiarLetra(f, c, evento) {
+    const letra = evento.target.value.toUpperCase()
+    if (!/^[A-ZÑ]?$/.test(letra)) return
+    guardarLetra(f, c, letra)
+    if (letra !== '') evento.target.nextElementSibling?.focus()
+  }
+
+  function pulsarTecla(letra) {
+    if (terminada) return
+    const c = intentos[filaActual].indexOf('')
+    if (c !== -1) guardarLetra(filaActual, c, letra)
+  }
+
+  function borrarLetra() {
+    if (terminada) return
+    const c = intentos[filaActual].findLastIndex((letra) => letra !== '')
+    if (c !== -1) guardarLetra(filaActual, c, '')
+  }
+
+  function comprobar(evento) {
+    evento.preventDefault()
+    if (terminada) return
+    if (intentos[filaActual].includes('')) {
+      setAviso('Faltan letras')
+      return
+    }
+    setFilaActual(filaActual + 1)
+  }
+
+  function nuevaPartida() {
+    setIntentos(tableroVacio())
+    setFilaActual(0)
+    setSolucion(palabraAlAzar(solucion))
+    setAviso('')
+  }
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
+    <form className="juego" onSubmit={comprobar}>
+      <h1>Wordle</h1>
+      <div className="tablero">
+        {intentos.map((fila, f) => {
+          const estados = f < filaActual ? estadosDeFila(fila, solucion) : []
+          return (
+            <div className="fila" key={f}>
+              {fila.map((letra, c) => (
+                <Casilla
+                  key={c}
+                  letra={letra}
+                  estado={estados[c] ?? ''}
+                  activa={f === filaActual && !terminada}
+                  fila={f}
+                  columna={c}
+                  onCambio={(evento) => cambiarLetra(f, c, evento)}
+                />
+              ))}
+            </div>
+          )
+        })}
+      </div>
+
+      {aviso && (
+        <p className="aviso" role="alert">
+          {aviso}
+        </p>
+      )}
+
+      {terminada ? (
+        <>
+          <p className="mensaje" role="status">
+            {ganada
+              ? '¡Enhorabuena, has acertado!'
+              : `La palabra era ${solucion}`}
           </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
+          <button className="boton" type="button" onClick={nuevaPartida}>
+            Nueva partida
+          </button>
+        </>
+      ) : (
+        <button className="boton" type="submit">
+          Comprobar
         </button>
-      </section>
+      )}
 
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
+      <Teclado
+        estados={estadosDelTeclado(intentos, filaActual, solucion)}
+        onLetra={pulsarTecla}
+        onBorrar={borrarLetra}
+      />
+    </form>
   )
 }
 
